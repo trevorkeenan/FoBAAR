@@ -84,7 +84,10 @@ implicit none
 	! terms A & B
 	      A = sinlat*sindec
 	      B = coslat*cosdec
-	      coszen = A+B*cos(2*pi*(j-(subDaily/2.))/(subDaily))   ! = solar zenith angle (equation 3.2 Goudriaan & van Laar)
+	      !coszen = A+B*cos(2*pi*(j-(subDaily/2.))/(subDaily))   ! = solar zenith angle (equation 3.2 Goudriaan & van Laar)
+          ! correction of Min Lee ('13)
+          coszen = A+B*cos(2*pi*(((j-1)-(subDaily/2))/(subDaily))) ! = solar zenith angle (equation 3.2 Goudriaan & van Laar)
+
 	
 	
 	! 2 - calculate the fraction of sunlit leaves
@@ -95,7 +98,9 @@ implicit none
 	
 	if(coszen.gt.0) then                                 		! check if day or night
 		extKb=funG/coszen                              		! beam extinction coeff - black leaves
-		AssignLAI = (1.0-exp(-extKb*lai))/extKb  ! LAI of sunlit leaves
+		!AssignLAI = (1.0-exp(-extKb*lai))/extKb  ! LAI of sunlit leaves
+        AssignLAI = (1.0-exp(-extKb*lai))/(extKb*lai)  ! LAI of sunlit leaves, Min Lee correction
+
 		if (AssignLAI.gt.LAI)AssignLAI=LAI
 		if (AssignLAI.lt.0)AssignLAI=0
 	else
@@ -112,7 +117,7 @@ implicit none
 	xK45=xphi1/cozen45+xphi2
 	xK75=xphi1/cozen75+xphi2
 	transd=0.308*exp(-xK15*LAI)+0.514*exp(-xK45*LAI)+0.178*exp(-xK75*LAI)
-	extkd=(-1./LAI)*alog(transd)
+	extkd=0.8 !(-1./LAI)*alog(transd)
 	
 	! Goudriaan theory as used in Leuning et al 1995 (Eq Nos from Goudriaan & van Laar, 1994)
 	radsol=par
@@ -153,7 +158,7 @@ implicit none
 		rhoc15=2.0*xK15*rhoch/(xK15+extkd)                                !canopy reflection (6.21) diffuse
 		rhoc45=2.0*xK45*rhoch/(xK45+extkd)
 		rhoc75=2.0*xK75*rhoch/(xK75+extkd)
-		rhoc(nw,2)=0.308*rhoc15+0.514*rhoc45+0.178*rhoc75
+		rhoc(nw,2)=0.057 !0.308*rhoc15+0.514*rhoc45+0.178*rhoc75, Min Lee correction
 		rhoc(nw,1)=2.0*extKb/(extKb+extkd)*rhoch                          !canopy reflection (6.21) beam 
 		reff(nw,1)=rhoc(nw,1)+(rhoS(nw)-rhoc(nw,1))*exp(-2.*kpr(nw,1)*LAI)                    !effective canopy-soil reflection coeff - beam (6.27)
 		reff(nw,2)=rhoc(nw,2)+(rhoS(nw)-rhoc(nw,2)) *exp(-2.*kpr(nw,2)*LAI)                       !effective canopy-soil reflection coeff - diffuse (6.27)

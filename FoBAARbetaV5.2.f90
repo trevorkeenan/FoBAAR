@@ -10,6 +10,9 @@
 ! -------------------------------------------------------------
 
 
+! !!!!!! NOTE  - FILE PATHS MUST BE CHANGED FOR ANY APPLICATION
+! !!!!!! see the variables 'home', 'forest', and any instances of 'unit='
+
 module obsdrivers
 
 ! for use in printing execution time....
@@ -22,34 +25,12 @@ character(len=18), parameter:: home = 'Users/trevorkeenan'
 ! set as a run identifier for running different configurations
 integer,parameter :: rep =1
 
-! Hesse final: 
-! rep=4 is optimized (10000) 
-! rep=2 is the prior parameter set
-       
-! For LeBray
-! 2: Prior model parameters
-! 4: 10000
-
-! For Soroe
-! 2: Prior model parameters
-! 4: 10000
-! 5: 10000
-! 6: 11000
-! 7: 15000
 
 ! the following parameters control the optimization
 integer, parameter :: r =1!00						! number of wandering iterations (from 1 to 10000. not absolutely necessary)
 integer, parameter :: q = 2!15000					! number of optimization iterations (from 2 to 100000. usually about 10000 is sufficient)       
 integer, parameter :: initial =1				        	! starting value 0: new optimization 1: start from previous best
 integer, parameter :: explore =1!0 !10000	    		! maximum number of parameter sets in explore stage (program exits if reached)
-
-!! for the 200 year simulation
-!integer, parameter :: r =1!00						! number of wandering iterations (from 1 to 10000. not absolutely necessary)
-!integer, parameter :: q = 1!0000					! number of optimization iterations (from 2 to 100000. usually about 10000 is sufficient)       
-!! need to put initial run D in the Future results folder
-!! NOTE: future run for both prior and optimized
-!integer, parameter :: initial =1					! starting value 0: new optimization 1: start from previous best
-!integer, parameter :: explore =0!200!0	    		! maximum number of parameter sets in explore stage (program exits if reached)
 
 
 ! -------------------------------------------------------------
@@ -60,48 +41,18 @@ integer, parameter :: explore =1!0 !10000	    		! maximum number of parameter se
 
 ! -------------------------------------------------------------
 !!			Deciduous CarboExtreme SITES
-! FR-Hes.  FRHes2 is for testing. NOT VALID RUN!!
-!character(len=*), parameter:: forest = 'FRHes2'
-!integer, parameter :: NOAA=1
-!integer, parameter :: stday =1+365*0+0
-!integer, parameter :: stdaycal =stday+(365*0)
-!integer, parameter :: ndaycal= stday+(365*12) +2
-!integer, parameter :: nday=ndaycal+(365*3)+1
-!integer, parameter :: nyears = nday/365
-!integer,parameter :: subDaily = 48.
 
 !! FR-Hes.  All years. Last two years for testing
 character(len=*), parameter:: forest = 'FRHes'
 integer, parameter :: NOAA=1
 integer, parameter :: stday =1+365*0
 integer, parameter :: stdaycal =stday+(365*0)
-integer, parameter :: ndaycal= stday+(365*12) +2
-integer, parameter :: nday=ndaycal+(365*3)+1
+integer, parameter :: ndaycal= stday+(365*1) +1
+integer, parameter :: nday=ndaycal+(365*1)+1
 integer, parameter :: nyears = nday/365
 integer,parameter :: subDaily = 48.								! 1 for daily, 24 for hourly, 48 for half hourly (half-hourly untested!)
-
-!! FR-Hes        200yrs  (needs large (~100MB?) stack size)
-!character(len=*), parameter:: forest = 'FRHes200'
-!integer, parameter :: NOAA=1					
-!integer, parameter :: stday =1+365*95+23	         		
-!integer, parameter :: stdaycal =stday+(365*0)			
-!integer, parameter :: ndaycal= stday     	
-!integer, parameter :: nday=ndaycal+(365*105)+25	
-!integer, parameter :: nyears = nday/365
-!integer,parameter :: subDaily = 48.								! 1 for daily, 24 for hourly, 48 for half hourly (half-hourly untested!)
-
-
-! DK-Sor.  All years. Last two years for testing
-!character(len=*), parameter:: forest = 'DKSor'
-!integer, parameter :: NOAA=1					
-!integer, parameter :: stday =1+365*0	         		
-!integer, parameter :: stdaycal =stday+(365*0)			
-!integer, parameter :: ndaycal= stday+(365*12) +2      	
-!integer, parameter :: nday=ndaycal+(365*2)	
-!integer, parameter :: nyears = nday/365
-!integer,parameter :: subDaily = 48.								! 1 for daily, 24 for hourly, 48 for half hourly (half-hourly untested!)
-
  
+
 ! -------------------------------------------------------------
 !!			Evergreen CarboExtreme SITES
 
@@ -115,17 +66,6 @@ integer,parameter :: subDaily = 48.								! 1 for daily, 24 for hourly, 48 for 
 !integer, parameter :: nday=ndaycal+(365*2)+1	
 !integer, parameter :: nyears = nday/365
 !integer,parameter :: subDaily = 48.		
-
-! FR-LBr        200yrs 
-!character(len=*), parameter:: forest = 'FRLBr200'
-!integer, parameter :: NOAA=1					
-!integer, parameter :: stday =1+365*95	+23         		
-!integer, parameter :: stdaycal =stday+(365*0)			
-!integer, parameter :: ndaycal= stday     	
-!integer, parameter :: nday=ndaycal+(365*105)+25	
-!integer, parameter :: nyears = nday/365
-!integer,parameter :: subDaily = 48.								! 1 for daily, 24 for hourly, 48 for half hourly (half-hourly untested!)
-
 
 ! -------------------------------------------------------------
 ! ---------- 	Set the parameters for the optimization (do not change)
@@ -270,7 +210,8 @@ real :: period                                                                ! 
 real :: drainage,runoff,soilWaterContent                                                  ! soil water variables
 
 ! temporary holding variables
-real :: xx,tmp,tmp2,tmp3,tmp4					
+real :: xx,tmp,tmp2,tmp3,tmp4
+real :: waterStress
 
 double PRECISION :: toterrAll
 
@@ -547,9 +488,10 @@ Do innerRun=1,numInnerRuns
 			Cw = P(20)
 			Clit = P(21)
 			Clab = P(23)
-			swc=p(16)                                ! initialize soil water content to be at holding capacity
-			swhc=swc+p(46)
-			
+			swhc= p(46) ! initialize soil water content to be at holding capacity
+			swc=swhc
+			droughtEdge=p(16)*swhc  ! drought effects start at this level
+
 			CsomPools(1)=P(22) 
 			CsomPools(2)=p(42) 
 			CsomPools(3)=p(43) 
@@ -845,10 +787,13 @@ Do innerRun=1,numInnerRuns
 								LAIsun = AssignLAI(lai,xfang,yearday,lat,j,subDaily,rad,PPFDsun,PPFDshd)
 								fAparDaily=fAparDaily+((PPFDsun+PPFDshd))
 								
-								tmp3=min(swc/p(16),1.0)
+								waterStress=min(swc/droughtEdge,1.0)
 								! sun leaf photosynthesis
-								G=PhotoSynth(airT,PPFDsun,VPD,Ca,Nit,LAI,Vcmax*(tmp3),EaVcmax,EdVcmax,EaJmax,EdJmax,SJmax,&
+								G=PhotoSynth(airT,PPFDsun,VPD,Ca,Nit,LAI,Vcmax*waterStress,EaVcmax,EdVcmax,EaJmax,EdJmax,SJmax,&
 													&Rd,Rdt,VQ10,p(31),p(32),p(34),Gc)*(0.0432396*period)*tadj*gdd(2)/p(27)
+                                ! gdd(2)/p(27) is the phenology of photosynthesis/Vcmax
+                                ! note: it's necessity could do with some testing.
+
 								Gc = Gc * 3600 * period
 								GsubDaily = (G*LAIsun)
 								GcSubDaily = (Gc*LAIsun)
@@ -857,8 +802,8 @@ Do innerRun=1,numInnerRuns
 								GcDaily2=GcDaily2+Gc
 								
 								! shade leaf photosynthesis
-								G=PhotoSynth(airT,PPFDshd,VPD,Ca,Nit,LAI,Vcmax*(swc/p(16)),EaVcmax,EdVcmax,EaJmax,EdJmax,SJmax,&
-													&Rd,Rdt,VQ10,p(31),p(32),p(34),gs)*(0.0432396*period)*tadj*gdd(2)/p(27)
+                                G=PhotoSynth(airT,PPFDshd,VPD,Ca,Nit,LAI,Vcmax*waterStress,EaVcmax,EdVcmax,EaJmax,EdJmax,SJmax,&
+													&Rd,Rdt,VQ10,p(31),p(32),p(34),Gc)*(0.0432396*period)*tadj*gdd(2)/p(27)
 								Gc = Gc * 3600 * period
 								GsubDaily = GsubDaily+ (G*(LAI-LAIsun))
 								GcSubDaily = GcSubDaily+ (Gc*(LAI-LAIsun))

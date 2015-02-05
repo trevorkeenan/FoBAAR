@@ -146,7 +146,7 @@ implicit none
 		
 		! Gc = (gs*VPD)*18.01528*10/1000
         Gc = gs * 1.6 * VPD * 1000 / 101300 * 18 / 1000
-        ! This Gc is in umol m-2 s-1 (min thinks!)
+        ! This Gc is in g H2O m-2 s-1
 
 
         ! gs is in mol/m^2 leaf area per day
