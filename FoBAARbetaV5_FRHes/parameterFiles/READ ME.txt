@@ -1,0 +1,6 @@
+These files contain …
+
+1. The prior range for each parameter used in the model (max, min, absolute max, absolute min, parameter number)
+The absolute bounds allow the optimization explore beyond the initial bounds, after the best parameter set has been found. This can give information about the true constraint of the parameter, and in some cases provide evidence that the initial bounds should perhaps be expanded.
+
+2. A description of each parameter.

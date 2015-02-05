@@ -1,0 +1,7 @@
+These files control which data are used as constraints in the optimization
+Flags are:
+1: Optimize model using this data stream
+2: Do not use this data stream in the optimization
+
+The indicator at the end of the file is associated with the ‘rep’ variable in the main code. 
+This allows running the optimization with different constraint configurations.

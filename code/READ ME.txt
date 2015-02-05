@@ -1,0 +1,16 @@
+These are the files of the Fortran code for the FoBAAR model.
+
+The main code is contained in
+FoBAARbetaV5.2.f90
+
+This code calls the following subroutines:
+AssignLAI.f90: This calculates the fraction of total LAI that is sun light or shaded at each time step, and the amount of PAR received by both.
+
+soilWaterContent.f90: This calculates the soil water content at each time step, using a simple bucket model.
+
+PhotoSynth.f90: This calculates both photosynthesis and conductance using the coupled farquhar ball-berry equation. 
+
+totalerrorV4bayes.f90: This calculates the cost function - the difference between the model predictions and the observations.
+
+posteriorChiSqTest.f90: This calculates the chi squared test for model iterations post optimization, in order to explore the posterior distribution of parameters and the associated uncertainty in model predictions. 
+

@@ -1,0 +1,10 @@
+These files contain the different data used both to force and optimize the model.
+
+bioData contains biometric data that can be used as constraints. 
+
+fluxData contains carbon and water flux data that can be used as constraints.
+
+metData contains meteorological data used to drive the model.
+
+
+THE FLUX DATA HERE ARE NOT FOR RE-DISTRIBUTION, NOR FOR PUBLIC RELEASE.
