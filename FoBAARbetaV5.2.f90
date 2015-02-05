@@ -1,10 +1,10 @@
 ! The FoBAAR model
 ! developed by Trevor F. Keenan, Apr 2013
 
-! betaV5.1
+! V5.2
 
 ! -------------------------------------------------------------
-! previous version betaV5b
+! previous version betaV5.1
 ! developed for the CarboExtreme project
 ! changes from previous version: new soil water content module
 ! -------------------------------------------------------------
@@ -20,7 +20,7 @@ real :: result
 character(len=18), parameter:: home = 'Users/trevorkeenan'	
 
 ! set as a run identifier for running different configurations
-integer,parameter :: rep =4
+integer,parameter :: rep =1
 
 ! Hesse final: 
 ! rep=4 is optimized (10000) 
@@ -197,7 +197,7 @@ real :: cwmeas,cwmeasE,cwmeasInc,cwmeasIncE,cwInc,cwPreviousYear
 real :: soilTotCmeas,soilTotCmeasE
 real :: rsoilmeas(3,2)
 real :: floatingIter,floatingAcc, floatingAns, floatingStepflag
-real :: swc        ! soil water content
+real :: swc,swhc        ! soil water content
 
 ! set how many soil pools the model should used (depreciated? do not change)
 integer,parameter :: numSoilPools = 3 			! 1,2 (fast, slow), 3 (fast, intermediate, slow)
@@ -270,7 +270,7 @@ real :: period                                                                ! 
 real :: drainage,runoff,soilWaterContent                                                  ! soil water variables
 
 ! temporary holding variables
-real :: xx,tmp,tmp2,tmp4					
+real :: xx,tmp,tmp2,tmp3,tmp4					
 
 double PRECISION :: toterrAll
 
@@ -300,7 +300,7 @@ if(numSoilPools.eq.1)then
 else if (numSoilPools.eq.2) then
 	nparams=42
 else
-	nparams=45
+	nparams=46
 endif
 
 ! define the time-integrating period for rates, etc.
@@ -376,12 +376,16 @@ if(outerRun.eq.initial)then		! read in only on first pass
 	
 	open(unit=27,file=&
 		&'/'//home//'/Dropbox/11.CarboExtreme/FoBAAR/FoBAARbetaV5_'//forest//'/&
-		&initial_P_rangesV5rep'//trim(adjustl(repChar))//'.csv',status='old')
-	
-	read(27,*)(absoluteBoundsP(i,1),i=1,nparams)
-	read(27,*)(absoluteBoundsP(i,2),i=1,nparams)
-	read(27,*)(boundsP(i,1),i=1,nparams)
-	read(27,*)(boundsP(i,2),i=1,nparams)
+		&initial_P_rangesV5_2rep'//trim(adjustl(repChar))//'.csv',status='old')
+	do i=1,nparams
+        read(27,*) absoluteBoundsP(i,1),absoluteBoundsP(i,2),boundsP(i,1),boundsP(i,2)
+    end do
+
+
+	!read(27,*)(absoluteBoundsP(i,1),i=1,nparams)
+	!read(27,*)(absoluteBoundsP(i,2),i=1,nparams)
+	!read(27,*)(boundsP(i,1),i=1,nparams)
+	!read(27,*)(boundsP(i,2),i=1,nparams)
 	
 		read(27,*) Lat,Nit,LMA
 		lat=lat*3.14/180.0		!convert to radians
@@ -544,6 +548,7 @@ Do innerRun=1,numInnerRuns
 			Clit = P(21)
 			Clab = P(23)
 			swc=p(16)                                ! initialize soil water content to be at holding capacity
+			swhc=swc+p(46)
 			
 			CsomPools(1)=P(22) 
 			CsomPools(2)=p(42) 
@@ -840,9 +845,11 @@ Do innerRun=1,numInnerRuns
 								LAIsun = AssignLAI(lai,xfang,yearday,lat,j,subDaily,rad,PPFDsun,PPFDshd)
 								fAparDaily=fAparDaily+((PPFDsun+PPFDshd))
 								
+								tmp3=min(swc/p(16),1.0)
 								! sun leaf photosynthesis
-								G=PhotoSynth(airT,PPFDsun,VPD,Ca,Nit,LAI,Vcmax*(swc/p(16)),EaVcmax,EdVcmax,EaJmax,EdJmax,SJmax,&
+								G=PhotoSynth(airT,PPFDsun,VPD,Ca,Nit,LAI,Vcmax*(tmp3),EaVcmax,EdVcmax,EaJmax,EdJmax,SJmax,&
 													&Rd,Rdt,VQ10,p(31),p(32),p(34),Gc)*(0.0432396*period)*tadj*gdd(2)/p(27)
+								Gc = Gc * 3600 * period
 								GsubDaily = (G*LAIsun)
 								GcSubDaily = (Gc*LAIsun)
 								Dresp=Rdt*0.0432396*period
@@ -852,6 +859,7 @@ Do innerRun=1,numInnerRuns
 								! shade leaf photosynthesis
 								G=PhotoSynth(airT,PPFDshd,VPD,Ca,Nit,LAI,Vcmax*(swc/p(16)),EaVcmax,EdVcmax,EaJmax,EdJmax,SJmax,&
 													&Rd,Rdt,VQ10,p(31),p(32),p(34),gs)*(0.0432396*period)*tadj*gdd(2)/p(27)
+								Gc = Gc * 3600 * period
 								GsubDaily = GsubDaily+ (G*(LAI-LAIsun))
 								GcSubDaily = GcSubDaily+ (Gc*(LAI-LAIsun))
 								Dresp=Dresp+Rdt*0.0432396*period
@@ -1132,11 +1140,11 @@ Do innerRun=1,numInnerRuns
 						Csom=sum(CsomPools)
 					        
 					        ! daily soil water content
-					        swc=soilWaterContent(swc,precipDaily,ETdaily(1),p(16),p(17),drainage,runoff) 
+					        swc=soilWaterContent(swc,precipDaily,ETdaily(1),swhc,p(17),drainage,runoff) 
 					
                                       if ((i.ge.stdaycal).and.(i.le.ndaycal)) then
 						
-						if ((laimeas(1).gt.-999).and.(laimeas(1).lt.3.65)) then
+						if (laimeas(1).gt.-999) then
 							err(3,1) = err(3,1)+((laimeas(1)-lai)/laimeas(2))**2
 							countD(3)=countD(3)+1
 						endif
@@ -1205,11 +1213,11 @@ Do innerRun=1,numInnerRuns
 						if ((yearday.eq.365.).or.(i.eq.ndaycal)) then
 							
 							! carbon in roots relative to estimated initial value
-							err(7,1) = err(7,1)+((Cr-140)/(70))**2
+							err(7,1) = err(7,1)+((Cr-p(19))/(p(19)*0.2)**2
 							countD(7)=countD(7)+1
 							
 							! carbon in litter relative to estimated initial value
-							err(6,1) = err(6,1)+((Clit-400)/(120))**2
+							err(6,1) = err(6,1)+((Clit-p(21))/(p(21)*0.2))**2
 							countD(6)=countD(6)+1
 							
 							! carbon in litter turnover time
@@ -1350,19 +1358,19 @@ Do innerRun=1,numInnerRuns
 									CountD(21)=CountD(21)+1
 									
 									! 2. The slow SOC pool (equivalent to the fast pool when using two pool model)
-									err(22,1)=err(22,1)+((3190+(20*(countD(22)-8))-CsomPools(2))/(1380))**2
+									err(22,1)=err(22,1)+((p(42)+(20*(countD(22)-8))-CsomPools(2))/(p(42)*0.2))**2
 									CountD(22)=CountD(22)+1
 									! 3. The passive SOC pool should not change greatly over time
-									err(27,1)=err(27,1)+((4900-CsomPools(3))/(1160))**2
+									err(27,1)=err(27,1)+((p(43)-CsomPools(3))/(p(43)*0.2))**2
 									CountD(27)=CountD(27)+1
 									
 								else if(numSoilPools.eq.2)then ! 2 pool model
-									err(21,1)=err(21,1)+((3190-CsomPools(1))/(1380))**2
+									err(21,1)=err(21,1)+((p(22)-CsomPools(1))/(p(22)*0.2))**2
 									CountD(21)=CountD(21)+1
-									err(22,1)=err(22,1)+((4900+(50*(countD(22)-8))-CsomPools(2))/(1160))**2
+									err(22,1)=err(22,1)+((p(42)+(50*(countD(22)-8))-CsomPools(2))/(p(42)*0.2))**2
 									CountD(22)=CountD(22)+1
 								else ! 1 pool model
-									err(21,1)=err(21,1)+((8090-CsomPools(1))/(1310))**2
+									err(21,1)=err(21,1)+((p(43)-CsomPools(1))/(p(43)*0.2))**2
 									CountD(21)=CountD(21)+1
 								endif
 					endif 
